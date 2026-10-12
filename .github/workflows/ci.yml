@@ -54,4 +54,48 @@ jobs:
 
       - name: Stop container
         if: always()
-        run: docker rm -f quote-app || true        
+        run: docker rm -f quote-app || true  
+
+      - name: Construire l'image de production
+        run: docker build -t app:ci .
+
+      - name: Démarrer les services
+        run: docker compose -f docker-compose.ci.yml up -d
+
+      - name: Attendre la disponibilité de l'application
+        run: |
+          echo "Vérification de la disponibilité de l'API..."
+          for i in $(seq 1 30); do
+            if curl -s -f http://localhost:3000/ > /dev/null; then
+              echo "L'application répond (tentative $i)."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Erreur : délai d'attente dépassé pour l'application."
+          exit 1
+
+      - name: Exécuter les assertions fonctionnelles
+        run: |
+          set -e
+          RESPONSE_INIT=$(curl -s http://localhost:3000/)
+          echo "Réponse initiale : $RESPONSE_INIT"
+          echo "$RESPONSE_INIT" | grep -q "Stay hungry, stay foolish"
+
+          PAYLOAD='{"quote": "Talk is cheap. Show me the code."}'
+          POST_RES=$(curl -s -X POST http://localhost:3000/quotes \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD")
+          echo "Réponse POST : $POST_RES"
+
+          FETCH_RES=$(curl -s http://localhost:3000/quotes)
+          echo "Réponse GET /quotes : $FETCH_RES"
+          echo "$FETCH_RES" | grep -q "Talk is cheap. Show me the code."
+
+      - name: Extraire les journaux en cas d'échec
+        if: failure()
+        run: docker compose -f docker-compose.ci.yml logs
+
+      - name: Arrêter et nettoyer les conteneurs
+        if: always()
+        run: docker compose -f docker-compose.ci.yml down -v      
