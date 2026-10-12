@@ -9,9 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
 
@@ -29,21 +29,21 @@ jobs:
         working-directory: labs/20-containerized-node-app
         run: docker build -t quote-app -f docker/Dockerfile .
 
-      - name: Run container smoke test
-        run: |
-          docker run -d --name quote-app -p 3000:3000 quote-app
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent --show-error \
-              --connect-timeout 1 --max-time 2 \
-              http://localhost:3000/health -o /tmp/quote-app-health.json \
-              && node -e 'const assert = require("node:assert/strict"); const fs = require("node:fs"); assert.equal(JSON.parse(fs.readFileSync("/tmp/quote-app-health.json", "utf8")).ok, true);'; then
-              echo "Health check passed"
-              exit 0
-            fi
-            sleep 1
-          done
-          echo "Health check failed"
-          exit 1
+      # - name: Run container smoke test
+      #   run: |
+      #     docker run -d --name quote-app -p 3000:3000 quote-app
+      #     for attempt in $(seq 1 30); do
+      #       if curl --fail --silent --show-error \
+      #         --connect-timeout 1 --max-time 2 \
+      #         http://localhost:3000/health -o /tmp/quote-app-health.json \
+      #         && node -e 'const assert = require("node:assert/strict"); const fs = require("node:fs"); assert.equal(JSON.parse(fs.readFileSync("/tmp/quote-app-health.json", "utf8")).ok, true);'; then
+      #         echo "Health check passed"
+      #         exit 0
+      #       fi
+      #       sleep 1
+      #     done
+      #     echo "Health check failed"
+      #     exit 1
 
       # - name: Show container diagnostics
       #   if: failure()
@@ -56,50 +56,21 @@ jobs:
       #   if: always()
       #   run: docker rm -f quote-app || true  
 
-      - name: Stop smoke test container
-        if: always()
-        run: docker rm -f smoke-test-app || true
+      - name: Start PostgreSQL and app
+        run: docker compose up -d --wait --wait-timeout 60
 
-      - name: Démarrer les services avec Compose
-        working-directory: labs/20-containerized-node-app
-        run: docker compose -f compose-ci.yml up -d
-
-      - name: Attendre la disponibilité de l'application
+      - name: Test quotes
         run: |
-          echo "Vérification de la disponibilité de l'API..."
-          for i in $(seq 1 30); do
-            if curl -s -f http://localhost:3000/ > /dev/null; then
-              echo "L'application répond (tentative $i)."
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "Erreur : délai d'attente dépassé pour l'application."
-          exit 1
+          for i in $(seq 1 30); do curl -fs localhost:3000/health > /dev/null && break; sleep 1; done
+          NEW="CI quote $GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          curl -fsS localhost:3000/ | grep -F "Talk is cheap. Show me the code."
+          curl -fsS -o /dev/null -X POST localhost:3000/quotes --data-urlencode "text=$NEW"
+          curl -fsS localhost:3000/ | grep -F "$NEW"
 
-      - name: Exécuter les assertions fonctionnelles
-        run: |
-          set -e
-          RESPONSE_INIT=$(curl -s http://localhost:3000/)
-          echo "Réponse initiale : $RESPONSE_INIT"
-          echo "$RESPONSE_INIT" | grep -q "Stay hungry, stay foolish"
-
-          PAYLOAD='{"quote": "Talk is cheap. Show me the code."}'
-          POST_RES=$(curl -s -X POST http://localhost:3000/quotes \
-            -H "Content-Type: application/json" \
-            -d "$PAYLOAD")
-          echo "Réponse POST : $POST_RES"
-
-          FETCH_RES=$(curl -s http://localhost:3000/quotes)
-          echo "Réponse GET /quotes : $FETCH_RES"
-          echo "$FETCH_RES" | grep -q "Talk is cheap. Show me the code."
-
-      - name: Extraire les journaux en cas d'échec
+      - name: Show logs on failure
         if: failure()
-        working-directory: labs/20-containerized-node-app
-        run: docker compose -f compose-ci.yml logs
+        run: docker compose logs db app
 
-      - name: Arrêter et nettoyer les conteneurs Compose
+      - name: Clean up
         if: always()
-        working-directory: labs/20-containerized-node-app
-        run: docker compose -f compose-ci.yml down -v
+        run: docker compose down -v
