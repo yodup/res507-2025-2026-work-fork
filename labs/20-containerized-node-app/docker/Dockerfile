@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 FROM node:24-trixie-slim
 
-# WORKDIR /app
+WORKDIR /app
 
 # Install dependencies first for better caching
 COPY app/package*.json ./
