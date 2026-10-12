@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS quotes (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-INSET INTO quotes(author, text)
+INSERT INTO quotes(author, text)
 VALUES
   ('grace', 'Make it work, then make it right, then make it fast.'),
   ('linus', 'Talk is cheap. Show me the code.'),
