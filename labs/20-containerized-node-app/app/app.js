@@ -43,7 +43,7 @@ export async function buildApp() {
     }
 
     /******* TODO INSERT quote into DB ******/
-    await app.pg.query('INSERT INTO quotes (author, text) VALUES ($1, $2)', [author || "anonymous", text]);
+    await app.postg.query('INSERT INTO quotes (author, text) VALUES ($1, $2)', [author || "anonymous", text]);
 
     app.log.info({quote: { author: author || "anonymous", text }}, 'New quote added');
 
