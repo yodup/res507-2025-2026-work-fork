@@ -11,7 +11,7 @@ export async function buildApp() {
   // Register plugins
   await app.register(postgres, {
     connectionString: process.env.DATABASE_URL ?? 'postgres://postgres@localhost/postgres'
-  
+  })
   await app.register(formbody);
   await app.register(view, {
     engine: { handlebars: handlebars },
