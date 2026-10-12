@@ -60,7 +60,7 @@ jobs:
         run: docker build -t app:ci .
 
       - name: Démarrer les services
-        run: docker compose -f docker-compose.ci.yml up -d
+        run: docker compose -f compose-ci.yml up -d
 
       - name: Attendre la disponibilité de l'application
         run: |
@@ -94,8 +94,8 @@ jobs:
 
       - name: Extraire les journaux en cas d'échec
         if: failure()
-        run: docker compose -f docker-compose.ci.yml logs
+        run: docker compose -f compose-ci.yml logs
 
       - name: Arrêter et nettoyer les conteneurs
         if: always()
-        run: docker compose -f docker-compose.ci.yml down -v      
+        run: docker compose -f compose-ci.yml down -v      
