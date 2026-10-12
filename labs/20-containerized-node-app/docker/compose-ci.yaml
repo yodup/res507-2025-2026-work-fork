@@ -16,7 +16,7 @@ services:
       retries: 10
 
   app:
-    image: app:ci
+    image: quote-app:ci
     environment:
       DATABASE_URL: postgres://postgres:postgres@db:5432/quotes_db
       PORT: 3000
