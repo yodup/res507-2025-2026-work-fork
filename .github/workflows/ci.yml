@@ -3,6 +3,9 @@ name: CI
 on:
   push:
   pull_request:
+  
+env:
+  COMPOSE_FILE: labs/20-containerized-node-app/docker/compose.ci.yaml
 
 jobs:
   build:
