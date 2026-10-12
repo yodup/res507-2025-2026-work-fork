@@ -27,7 +27,7 @@ jobs:
 
       - name: Build Docker image
         working-directory: labs/20-containerized-node-app
-        # run: docker build -t quote-app -f docker/Dockerfile .
+        run: docker build -t quote-app -f docker/Dockerfile .
 
       - name: Run container smoke test
         run: |
