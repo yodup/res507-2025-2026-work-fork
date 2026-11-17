@@ -16,23 +16,29 @@ spec:
         - name: quote-app
           image: quote-app:v2
           imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 3000
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 3000
-            initialDelaySeconds: 3
-            periodSeconds: 5
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 3000
-            initialDelaySeconds: 3
-            periodSeconds: 5
           env:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
                   name: quote-db-secret
                   key: DATABASE_URL
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: PORT
+          ports:
+            - name: http
+              containerPort: 3001
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
